@@ -1,0 +1,27 @@
+# Python 캐시 및 컴파일 파일
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# 가상환경
+venv/
+env/
+
+# 환경 변수 파일
+.env
+
+# 로그 파일
+*.log
+
+# VSCode 설정 (선택)
+.vscode/
+
+# JetBrains (PyCharm)
+.idea/
+*.iml
+
+# OS 관련 무시 파일
+.DS_Store
+Thumbs.db
