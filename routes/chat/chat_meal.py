@@ -19,6 +19,7 @@ def extract_food_names(message: str):
 문장: "{message}"
 """
     response = model.generate_content(prompt)
+    print("Gemini 응답:", response.text)
     try:
         food_list = eval(response.text.strip())
         if isinstance(food_list, list):
