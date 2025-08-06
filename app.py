@@ -2,13 +2,18 @@ from flask import Flask
 from config import Config
 from extensions import mongo
 from routes.signup.user_routes import user_bp
+from routes.recipes.keywords import keywords_bp
+from routes.recipes.search import search_bp
 from extensions import mongo
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     mongo.init_app(app)
+
     app.register_blueprint(user_bp)
+    app.register_blueprint(keywords_bp)
+    app.register_blueprint(search_bp)
     return app
 
 if __name__ == '__main__':
