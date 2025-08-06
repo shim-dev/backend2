@@ -4,6 +4,9 @@ from extensions import mongo
 from routes.signup.user_routes import user_bp
 from routes.recipes.keywords import keywords_bp
 from routes.recipes.search import search_bp
+from routes.recipes.views import view_bp
+from routes.recipes.search_history import search_history_bp
+
 from extensions import mongo
 
 def create_app():
@@ -14,6 +17,8 @@ def create_app():
     app.register_blueprint(user_bp)
     app.register_blueprint(keywords_bp)
     app.register_blueprint(search_bp)
+    app.register_blueprint(view_bp)
+    app.register_blueprint(search_history_bp)
     return app
 
 if __name__ == '__main__':

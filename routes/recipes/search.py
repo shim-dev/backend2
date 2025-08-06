@@ -6,8 +6,8 @@ search_bp = Blueprint('search', __name__)
 @search_bp.route('/recipes/search', methods=['GET'])
 def search_recipes():
     try:
-        # 쿼리 파라미터에서 검색어 가져오기
         keyword = request.args.get('keyword', '').strip()
+        sort_by = request.args.get('sort', 'latest')  # 기본값 latest
 
         if not keyword:
             return jsonify({
@@ -15,7 +15,7 @@ def search_recipes():
                 "message": "Keyword is required"
             }), 400
 
-        # name 또는 desc 필드에 keyword가 포함된 데이터 검색 (대소문자 무시)
+        # 검색 조건
         query = {
             "$or": [
                 {"name": {"$regex": keyword, "$options": "i"}},
@@ -23,7 +23,13 @@ def search_recipes():
             ]
         }
 
-        # MongoDB에서 레시피 데이터 가져오기 (_id 제외)
+        # 정렬 조건
+        if sort_by == 'views':
+            sort_option = [("views", -1)]  # 조회순
+        else:
+            sort_option = [("_id", -1)]  # 최신순 (기본값)
+
+        # MongoDB 조회 + 정렬
         recipes_cursor = mongo.db.recipes.find(query, {
             "_id": 1,
             "name": 1,
@@ -38,11 +44,14 @@ def search_recipes():
             "ingredients": 1,
             "score": 1,
             "views": 1
-        })
+        }).sort(sort_option)
 
-        # 결과 리스트로 변환
         recipes_list = list(recipes_cursor)
-        print(recipes_list)
+
+        # ObjectId → 문자열 변환
+        for recipe in recipes_list:
+            recipe["_id"] = str(recipe["_id"])
+
         return jsonify(recipes_list), 200
 
     except Exception as e:
