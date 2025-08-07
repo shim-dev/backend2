@@ -1,0 +1,20 @@
+POST http://localhost:5000/api/challenges/create
+Content-Type: application/json
+
+{
+  "title": "[운동 챌린지] 하루 오천보 걷기",
+  "description": "하루 오천보를 걸으며 건강한 습관을 만들어보세요!",
+  "image_url": "https://example.com/challenge_walk.png",
+  "points_reward": 50,
+  "max_participants": 10,
+  "start_date": "2025-08-01",
+  "end_date": "2025-08-31"
+}
+
+
+PUT http://localhost:5000/api/challenges/68935a66005115c3f1a6cc5b
+Content-Type: application/json
+
+{
+  "goal_steps": 5000
+}
