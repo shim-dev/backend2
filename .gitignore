@@ -25,3 +25,6 @@ env/
 # OS 관련 무시 파일
 .DS_Store
 Thumbs.db
+
+#firebase 보안키
+firebase-key.json
