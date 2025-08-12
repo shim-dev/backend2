@@ -8,7 +8,7 @@ from typing import List, Dict, Any
 
 post_bp = Blueprint("post", __name__, url_prefix="/posts")
 
-ALLOWED_DIFFICULTY = {"LOW", "MID", "HIGH"}
+ALLOWED_DIFFICULTY = {"상", "중", "하"}
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 TEXT_MODEL = genai.GenerativeModel("gemini-2.5-flash")
@@ -137,23 +137,30 @@ def _validate_recipe(data: dict) -> Dict[str, str]:
             errors["keywords"] = "문자열 배열이어야 함"
         elif len(keywords) > 10 or any(not isinstance(c, str) or not c.strip() for c in keywords):
             errors["keywords"] = "빈 값 불가, 최대 10개"
-    # time (소요 시간)
-    time = data.get("time")
-    if time is not None:
-        if not isinstance(time, (int, str)) or not (1 <= int(time) <= 1440):
-            errors["time"] = "1~1440 범위의 정수"
+        # time (소요 시간)
+    time_val = data.get("time") # 변수 이름 변경
+    if time_val is not None:
+        if not isinstance(time_val, (int, str)):
+            errors["time"] = "정수 또는 문자열 형식의 숫자"
+        else:
+            try:
+                if not (1 <= int(time_val) <= 1440):
+                    errors["time"] = "1~1440 범위의 정수"
+            except ValueError:
+                errors["time"] = "숫자로 변환할 수 없는 값"
     else:
         errors["time"] = "소요 시간 필수"
     # level (난이도)
     level = data.get("level")
     if level is not None:
-        if not isinstance(level, str) or level.upper() not in ALLOWED_DIFFICULTY:
-            errors["level"] = "LOW/MID/HIGH 중 하나"
-    # imageUrl (단일 이미지 URL) - ✅ 수정된 부분
-    imageUrl = data.get("imageUrl")
-    if imageUrl is not None:
-        if not isinstance(imageUrl, str) or not imageUrl.strip().startswith("http"):
-            errors["imageUrl"] = "올바른 URL 문자열이어야 합니다."
+        # ✅ 유효성 검사에서 한글 난이도 값을 사용
+        if not isinstance(level, str) or level not in ALLOWED_DIFFICULTY:
+            errors["level"] = "상/중/하 중 하나"
+    # imageUrl (단일 이미지 URL)
+    imageUrl = data.get("imageUrl", "") # ✅ data.get() 사용
+    if imageUrl: # ✅ imageUrl 변수 사용
+        if not isinstance(imageUrl, str) or not imageUrl.startswith("http"):
+            errors["imageUrl"] = "올바른 URL 형식이어야 합니다."
     # serving
     serving = data.get("serving")
     if serving is not None:
@@ -188,14 +195,15 @@ def create_recipe():
             steps=data.get("steps", [])
         )
         
+        time_int = int(data.get("time", 0))
 
         doc = {
             "name": data.get("name", "").strip(),
             "keywords": data.get("keywords", []),
             "desc": data.get("desc", "").strip(),
-            "time": data.get("time"),
-            "level": (data.get("level", "") or "").upper() or None,
-            "imageUrl": data.get("imageUrl", ""),  # ✅ 단일 문자열로 저장
+            "time": time_int,
+            "level": data.get("level", ""),
+            "imageUrl": data.get("imageUrl", ""),
             "serving": data.get("serving"),
             "steps": data.get("steps", []),
             "ingredients": data.get("ingredients", []),
