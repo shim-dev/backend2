@@ -24,7 +24,7 @@ model = genai.GenerativeModel("gemini-2.5-flash")
 @news_bp.route("/news", methods=["POST"])
 def get_antiaging_news():
     try:
-        query = urllib.parse.quote("저속노화")
+        query = urllib.parse.quote("저속노화+식단")
         url = f"https://openapi.naver.com/v1/search/news.json?query={query}&display=3&sort=date"
         
         headers = {
