@@ -168,11 +168,10 @@ def extract_foods_from_image_bytes(image_bytes: bytes, mime: str = "image/jpeg")
 
     return []
 
-# ---------- MIND 점수 ----------#
 # ---------- MIND 점수 ----------
 def score_foods_mind(foods: list, meal_type: str):
     if not foods:
-        return {"items": [], "meal_score": 0.0, "notes": ""}
+        return {"items": [], "meal_score": 0.0, "notes": "음식 목록이 비어있습니다.", "recommendation": "식사를 기록해 보세요!"}
 
     mind_rules = """
 건강군: 뇌 건강에 매우 좋은 음식군 (높은 점수)
@@ -196,53 +195,57 @@ def score_foods_mind(foods: list, meal_type: str):
 """
 
     prompt = f"""
-너는 영양 코치다. 다음 음식들을 MIND 식단 기준에 따라 100점 만점 점수를 매겨줘.
-100점에 가까울수록 뇌 건강에 좋은 식단이야.
+너는 '저속노화'에 대해 잘 아는 영양 코치다. 다음 음식들을 MIND 식단 기준에 따라 100점 만점 점수를 매겨줘.
+100점에 가까울수록 뇌 건강과 저속노화에 좋은 식단이야.
 아래 규칙을 고려하여, 각 음식에 대한 점수(score), 카테고리, 간단한 설명을 JSON 객체로 반환해.
 
 # MIND 식단 점수 규칙
 {mind_rules}
 
 - 각 음식에 대해 MIND 카테고리를 지정하고, 100점 만점 점수(score)를 정수로 산출해.
-- 'note'에는 점수에 대한 간단한 설명을 남겨.
+- 'note'에는 점수에 대한 간단한 설명을 남겨줘.
+- 'recommendation'에는 다음 식사는 어떤 식으로 먹어보면 좋을지 저속노화 관점에서 구체적인 팁을 제공해줘.
+- 'recommendation'와 'note'는 말풍선에 담기기 쉽게 간단하게 작성해줘.
 - **입력된 음식 외에 함께 먹는 다른 음식은 평가에 포함하지 마.**
 - 반드시 JSON 객체만 응답해.
-  - 예시: {{"items":[ {{"food":"닭가슴살 샐러드", "categories":["가금류", "녹색 잎채소", "기타 채소"], "score":90, "note":"뇌 건강에 좋은 채소와 단백질이 풍부합니다."}}, {{"food":"족발", "categories":["붉은 고기"], "score":30, "note":"붉은 고기 위주로 구성되어 있어 점수가 낮습니다."}} ], "notes":"오늘 식단은 뇌 건강에 매우 긍정적입니다."}}
+  - 예시: {{"items":[ {{"food":"닭가슴살 샐러드", "categories":["가금류", "녹색 잎채소", "기타 채소"], "score":90, "note":"뇌 건강에 좋은 채소와 단백질이 풍부합니다."}}, {{"food":"족발", "categories":["붉은 고기"], "score":30, "note":"붉은 고기 위주로 구성되어 있어 점수가 낮습니다."}} ], "notes":"오늘 식단은 뇌 건강에 매우 긍정적입니다.", "recommendation": "다음 식사에는 붉은 고기 대신 생선이나 닭가슴살을 선택해 보세요. 더 많은 통곡물과 채소를 곁들이는 것도 좋습니다."}}
 
 음식 리스트: {foods}
 식사 타입: {meal_type}
 """
 
-    # Gemini API 호출
     resp = _gen_call(TEXT_MODEL, prompt, json_only=True, timeout=15, retries=3)
     text = _extract_text_safe(resp) if resp else None
     
+    # 1. JSON 코드블록이 있거나 없거나 안정적으로 파싱
     data = {}
     if text:
-        # 1. JSON 코드블록(```json...```)이 있으면 그 내용만 사용
-        cleaned = re.sub(r"```(?:json)?|```", "", text).strip()
         try:
-            data = json.loads(cleaned)
+            # 먼저 JSON 코드 블록을 제거하고 파싱 시도
+            cleaned_text = re.sub(r"```(?:json)?|```", "", text, flags=re.DOTALL).strip()
+            data = json.loads(cleaned_text)
         except json.JSONDecodeError:
-            # 2. 파싱 실패 시, 텍스트에서 가장 큰 JSON 객체 추출 시도
+            # 실패 시, 텍스트에서 가장 큰 JSON 객체 추출 시도
             try:
-                match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+                match = re.search(r'\{.*\}', text, re.DOTALL)
                 if match:
                     data = json.loads(match.group(0))
-            except Exception:
-                logging.error("Failed to parse JSON from Gemini response: %s", cleaned)
-
-    # 파싱 결과 로그로 확인
+            except Exception as e:
+                logging.error("Failed to parse JSON from Gemini response: %s | Error: %s", text, e)
+    
     logging.info(f"Gemini raw response: {text}")
     logging.info(f"Parsed data: {data}")
 
+    # 2. 파싱된 데이터에서 items 리스트 가져오기
     items = data.get("items", []) if isinstance(data, dict) else []
+    notes = data.get("notes", "") if isinstance(data, dict) else ""
+    recommendation = data.get("recommendation", "") # ✅ 이 부분을 추가했습니다
     
     meal_score_total = 0.0
     valid_item_count = 0
     
     for it in items:
-        # 안전한 점수 추출 로직
+        # 3. 점수 추출 및 유효성 검사
         score_val = it.get("score")
         if isinstance(score_val, (int, float)):
             score = max(0, min(100, int(score_val)))
@@ -250,7 +253,6 @@ def score_foods_mind(foods: list, meal_type: str):
             valid_item_count += 1
             it["score"] = score
         else:
-            # 점수 필드가 없거나 유효한 숫자가 아닐 경우
             logging.warning(f"Invalid score value for food '{it.get('food')}': {score_val}")
             it["score"] = 0
             
@@ -262,7 +264,8 @@ def score_foods_mind(foods: list, meal_type: str):
 
     logging.info(f"Calculated final meal score: {final_meal_score}")
 
-    return {"items": items, "meal_score": final_meal_score, "notes": data.get("notes", "")}
+    # ✅ 반환 값에 recommendation을 추가합니다
+    return {"items": items, "meal_score": final_meal_score, "notes": notes, "recommendation": recommendation}
 
 # ---------- 라우트 ----------
 @chat_meal_bp.route('/chat-meal', methods=['POST'])
