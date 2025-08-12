@@ -20,7 +20,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-pro")
 cloudinary.config(cloudinary_url=os.getenv("CLOUDINARY_URL"))
 
-challenge_bp = Blueprint('challenge', __name__)
+challenge_bp = Blueprint('challenge', __name__, url_prefix='/api')
 
 # ---- [테스트 모드 설정] ----
 TEST_MODE = False             # 나중에 False로 바꾸면 원래대로 동작

@@ -39,6 +39,7 @@ def create_app():
     app.register_blueprint(search_history_bp)
     app.register_blueprint(post_bp)
     app.register_blueprint(challenge_bp, url_prefix='/api')
+
     return app
 
 if __name__ == '__main__':
