@@ -16,6 +16,8 @@ from routes.challenge.challenge_routes import challenge_bp
 from extensions import mongo
 import firebase_admin
 from firebase_admin import credentials, storage
+from routes.chat.history import main_routes
+
 
 cred = credentials.Certificate("firebase-key.json")
 firebase_admin.initialize_app(cred, {
